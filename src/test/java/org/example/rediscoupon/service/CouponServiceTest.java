@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -40,25 +41,7 @@ class CouponServiceTest {
     public void 여러명응모() throws InterruptedException {
         int threadCount = 1000;
         String type = "book";
-        ExecutorService executorService = Executors.newFixedThreadPool(32);
-
-        CountDownLatch latch = new CountDownLatch(threadCount);
-
-        for (int i = 0; i < threadCount; i++) {
-            long userId = i;
-            executorService.execute(() -> {
-                try {
-                    couponService.applyCoupon(userId, type);
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        latch.await();
-
-        // 스레드 풀 종료
-        executorService.shutdown();
+        IntStream.range(0, threadCount).parallel().forEach(i -> couponService.applyCoupon((long) i, type));
 
         // 검증
         Long count = redisTemplate.opsForList().size("coupons:" + type);
